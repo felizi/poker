@@ -37,6 +37,30 @@ const (
 	aces    = "A"
 )
 
+// Hand of Poker
+type Hand int
+
+const (
+	HighCard      Hand = iota
+	OnePair            = iota
+	TwoPair            = iota
+	ThreeOfAKind       = iota
+	Straight           = iota
+	Flush              = iota
+	FullHouse          = iota
+	FourOfAKind        = iota
+	StraightFlush      = iota
+	RoyalFlush         = iota
+)
+
+func (d Hand) String() string {
+	return [...]string{"High Card", "One Pair", "Two Pair", "Three of a Kind", "Straight", "Flush", "Full House", "Four of a Kind", "Straight Flush", "Royal Flush"}[d]
+}
+
+type Checker interface {
+	execute(cards [7]Card) (Hand, int, *[5]Card)
+}
+
 func main() {
 	var cards []Card
 	sequence := []string{two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, aces}
@@ -58,32 +82,31 @@ func main() {
 	river := river(remove(cards, turn[:]))
 	fmt.Printf("community cards: %v\n", []Card{flop[0], flop[1], flop[2], turn[0], river[0]})
 
-	check("Player1", player1, flop, turn, river)
-	check("Player2", player2, flop, turn, river)
+	h, w, c := check(player1, flop, turn, river)
+	fmt.Printf("Player1:\t[%v]\t[%v]\t%v\n", *h, *w, *c)
+	h, w, c = check(player2, flop, turn, river)
+	fmt.Printf("Player2:\t[%v]\t[%v]\t%v\n", *h, *w, *c)
 }
 
-func check(name string, hand [2]Card, flop [3]Card, turn, river [1]Card) {
-	fmt.Printf("%v: \t %v\n", name, concatenate(hand, flop, turn, river))
-	w, rf := royalFlush(hand, flop, turn, river)
-	fmt.Printf("%v - royal flush: \t %v %v\n", name, w, rf)
-	w, sf := straightFlush(hand, flop, turn, river)
-	fmt.Printf("%v - straight flush: \t %v %v\n", name, w, sf)
-	w, foak := fourOfAKind(hand, flop, turn, river)
-	fmt.Printf("%v - four of a kind: \t %v %v\n", name, w, foak)
-	w, fh := fullHouse(hand, flop, turn, river)
-	fmt.Printf("%v - full house: \t %v %v\n", name, w, fh)
-	w, f := flush(hand, flop, turn, river)
-	fmt.Printf("%v - flush: \t %v %v\n", name, w, f)
-	w, s := straight(hand, flop, turn, river)
-	fmt.Printf("%v - straight: \t %v %v\n", name, w, s)
-	w, t := threeOfAKind(hand, flop, turn, river)
-	fmt.Printf("%v - three of a kind: \t %v %v\n", name, w, t)
-	w, p := twoPair(hand, flop, turn, river)
-	fmt.Printf("%v - two pair: \t %v %v\n", name, w, p)
-	w, c := onePair(hand, flop, turn, river)
-	fmt.Printf("%v - one pair: \t %v %v\n", name, w, c)
-	w, h := highCard(hand, flop, turn, river)
-	fmt.Printf("%v - high card: \t %v  %v\n", name, w, h)
+func check(hand [2]Card, flop [3]Card, turn, river [1]Card) (*Hand, *int, *[5]Card) {
+	cards := concatenate(hand, flop, turn, river)
+	checkers := []Checker{
+		RoyalFlushChecker{},
+		StraightFlushChecker{},
+		FullHouseChecker{},
+		FlushChecker{},
+		StraightChecker{},
+		ThreeOfAKindChecker{},
+		TwoPairChecker{},
+		OnePairChecker{},
+		HighCardChecker{}}
+	for _, c := range checkers {
+		h, w, c := c.execute(cards)
+		if w > 0 {
+			return &h, &w, c
+		}
+	}
+	return nil, nil, nil
 }
 
 func remove(items []Card, exclusions []Card) []Card {
@@ -127,259 +150,20 @@ func random(x []Card) Card {
 	return x[rand.Intn(len(x))]
 }
 
-func royalFlush(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[5]Card) {
-	cards := concatenate(hand, flop, turn, river)
-
+func fill(start []Card, complete []Card) *[5]Card {
 	var result [5]Card
-	var weight int
-	var lastWeight int
-	var idx int
-	var suit string
-	for x := 0; x < len(cards); x++ {
-		if idx == 0 && cards[x].ID == "A" || lastWeight-1 == cards[x].Weight && suit == cards[x].Suit {
-			lastWeight = cards[x].Weight
-			weight += cards[x].Weight
-			result[idx] = cards[x]
-			idx++
-			suit = cards[x].Suit
+	completeWithoutStart := remove(complete, start)
+	for i := 0; i < len(result); i++ {
+		if i < len(start) {
+			result[i] = start[i]
 		} else {
-			lastWeight = 0
-			weight = 0
-			result = [5]Card{}
-			idx = 0
-			suit = ""
-		}
-		if idx >= 5 {
-			return weight, &result
+			result[i] = completeWithoutStart[i-len(start)]
 		}
 	}
-
-	return 0, nil
+	return &result
 }
 
-func straightFlush(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[5]Card) {
-	cards := concatenate(hand, flop, turn, river)
-
-	var result [5]Card
-	var weight int
-	var lastWeight int
-	var idx int
-	var suit string
-	for x := 0; x < len(cards); x++ {
-		if x == 0 || lastWeight-1 == cards[x].Weight && suit == cards[x].Suit {
-			lastWeight = cards[x].Weight
-			weight += cards[x].Weight
-			result[idx] = cards[x]
-			idx++
-			suit = cards[x].Suit
-		} else {
-			lastWeight = 0
-			weight = 0
-			result = [5]Card{}
-			idx = 0
-			suit = ""
-		}
-		if idx >= 5 {
-			return weight, &result
-		}
-	}
-
-	return 0, nil
-}
-
-func fourOfAKind(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[4]Card) {
-	m := groupByID(hand, flop, turn, river)
-	var matches []string
-	for k, v := range m {
-		if len(v) == 4 {
-			matches = append(matches, k)
-		}
-	}
-	if len(matches) == 1 {
-		var result [4]Card
-		var weight int
-		for i := 0; i < len(matches); i++ {
-			for x := 0; x < len(m[matches[i]]); x++ {
-				c := m[matches[i]][x]
-				weight += c.Weight
-				result[x] = c
-			}
-		}
-		return weight, &result
-	}
-
-	return 0, nil
-}
-
-func fullHouse(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[5]Card) {
-	m := groupByID(hand, flop, turn, river)
-	var threePair []string
-	var twoPair []string
-	for k, v := range m {
-		if len(v) == 3 {
-			threePair = append(threePair, k)
-		}
-		if len(v) == 2 {
-			twoPair = append(twoPair, k)
-		}
-	}
-	if len(twoPair) == 1 && len(threePair) == 1 {
-		cards := append(twoPair, threePair...)
-		var result [5]Card
-		var weight int
-		var idx int
-		for i := 0; i < len(cards); i++ {
-			for x := 0; x < len(m[cards[i]]); x++ {
-				c := m[cards[i]][x]
-				weight += c.Weight
-				result[idx] = c
-				idx++
-			}
-		}
-		return weight, &result
-	}
-
-	return 0, nil
-}
-
-func flush(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[5]Card) {
-	m := groupBySuit(hand, flop, turn, river)
-
-	var matches []string
-	for k, v := range m {
-		if len(v) == 5 {
-			matches = append(matches, k)
-		}
-	}
-	if len(matches) == 1 {
-		var result [5]Card
-		var weight int
-		for i := 0; i < len(matches); i++ {
-			for x := 0; x < len(m[matches[i]]); x++ {
-				c := m[matches[i]][x]
-				weight += c.Weight
-				result[x] = c
-			}
-		}
-		return weight, &result
-	}
-
-	return 0, nil
-
-}
-
-func straight(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[5]Card) {
-	cards := concatenate(hand, flop, turn, river)
-
-	var result [5]Card
-	var weight int
-	var lastWeight int
-	var idx int
-	for x := 0; x < len(cards); x++ {
-		if x == 0 || lastWeight-1 == cards[x].Weight {
-			lastWeight = cards[x].Weight
-			weight += cards[x].Weight
-			result[idx] = cards[x]
-			idx++
-		} else {
-			lastWeight = 0
-			weight = 0
-			result = [5]Card{}
-			idx = 0
-		}
-		if idx >= 5 {
-			return weight, &result
-		}
-	}
-
-	return 0, nil
-}
-
-func threeOfAKind(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[3]Card) {
-	m := groupByID(hand, flop, turn, river)
-	var matches []string
-	for k, v := range m {
-		if len(v) == 3 {
-			matches = append(matches, k)
-		}
-	}
-	if len(matches) == 1 {
-		var result [3]Card
-		var weight int
-		for i := 0; i < len(matches); i++ {
-			for x := 0; x < len(m[matches[i]]); x++ {
-				c := m[matches[i]][x]
-				weight += c.Weight
-				result[x] = c
-			}
-		}
-		return weight, &result
-	}
-
-	return 0, nil
-}
-
-func twoPair(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[2][2]Card) {
-	m := groupByID(hand, flop, turn, river)
-	var matches []string
-	for k, v := range m {
-		if len(v) == 2 {
-			matches = append(matches, k)
-		}
-	}
-	if len(matches) == 2 {
-		var result [2][2]Card
-		var weight int
-		for i := 0; i < len(matches); i++ {
-			for x := 0; x < len(m[matches[i]]); x++ {
-				c := m[matches[i]][x]
-				weight += c.Weight
-				result[i][x] = c
-			}
-		}
-		return weight, &result
-	}
-
-	return 0, nil
-}
-
-func onePair(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[2]Card) {
-	m := groupByID(hand, flop, turn, river)
-	var matches []string
-	for k, v := range m {
-		if len(v) == 2 {
-			matches = append(matches, k)
-		}
-	}
-	if len(matches) == 1 {
-		var result [2]Card
-		var weight int
-		for i := 0; i < len(matches); i++ {
-			for x := 0; x < len(m[matches[i]]); x++ {
-				c := m[matches[i]][x]
-				weight += c.Weight
-				result[x] = c
-			}
-		}
-		return weight, &result
-	}
-
-	return 0, nil
-}
-
-func highCard(hand [2]Card, flop [3]Card, turn, river [1]Card) (int, *[5]Card) {
-	cards := concatenate(hand, flop, turn, river)
-	var sum int
-	var result [5]Card
-	for i := 0; i < 5; i++ {
-		sum += cards[i].Weight
-		result[i] = cards[i]
-	}
-	return sum, &result
-}
-
-func groupByID(hand [2]Card, flop [3]Card, turn, river [1]Card) map[string][]Card {
-	cards := concatenate(hand, flop, turn, river)
+func groupByID(cards [7]Card) map[string][]Card {
 	m := make(map[string][]Card)
 	for i := 0; i < len(cards); i++ {
 		if m[cards[i].ID] == nil {
@@ -391,8 +175,7 @@ func groupByID(hand [2]Card, flop [3]Card, turn, river [1]Card) map[string][]Car
 	return m
 }
 
-func groupBySuit(hand [2]Card, flop [3]Card, turn, river [1]Card) map[string][]Card {
-	cards := concatenate(hand, flop, turn, river)
+func groupBySuit(cards [7]Card) map[string][]Card {
 	m := make(map[string][]Card)
 	for i := 0; i < len(cards); i++ {
 		if m[cards[i].Suit] == nil {
