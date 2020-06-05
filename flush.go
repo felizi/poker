@@ -3,8 +3,8 @@ package main
 type FlushChecker struct {
 }
 
-func (o FlushChecker) execute(cards [7]Card) (Hand, int, *[5]Card) {
-	m := groupBySuit(cards)
+func (o FlushChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Card) {
+	m := avaiableCards.groupBySuit()
 
 	var matches []string
 	for k, v := range m {

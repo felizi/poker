@@ -3,8 +3,9 @@ package main
 type TwoPairChecker struct {
 }
 
-func (o TwoPairChecker) execute(cards [7]Card) (Hand, int, *[5]Card) {
-	m := groupByID(cards)
+func (o TwoPairChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Card) {
+	cards := avaiableCards.get()
+	m := avaiableCards.groupByID()
 	var matches []string
 	for k, v := range m {
 		if len(v) == 2 {
@@ -12,18 +13,21 @@ func (o TwoPairChecker) execute(cards [7]Card) (Hand, int, *[5]Card) {
 		}
 	}
 	if len(matches) == 2 {
-		var result [4]Card
-		var weight int
+		var temp [4]Card
 		var idx int
 		for i := 0; i < len(matches); i++ {
 			for x := 0; x < len(m[matches[i]]); x++ {
 				c := m[matches[i]][x]
-				weight += c.Weight
-				result[idx] = c
+				temp[idx] = c
 				idx++
 			}
 		}
-		return TwoPair, weight, fill(result[:], cards[:])
+		result := fill(temp[:], cards[:])
+		var weight int
+		for i := 0; i < len(result); i++ {
+			weight += result[i].Weight
+		}
+		return TwoPair, weight, result
 	}
 
 	return TwoPair, 0, nil

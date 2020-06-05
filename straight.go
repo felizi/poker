@@ -3,7 +3,8 @@ package main
 type StraightChecker struct {
 }
 
-func (o StraightChecker) execute(cards [7]Card) (Hand, int, *[5]Card) {
+func (o StraightChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Card) {
+	cards := avaiableCards.get()
 	var result [5]Card
 	var weight int
 	var lastWeight int

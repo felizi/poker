@@ -3,7 +3,8 @@ package main
 type HighCardChecker struct {
 }
 
-func (o HighCardChecker) execute(cards [7]Card) (Hand, int, *[5]Card) {
+func (o HighCardChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Card) {
+	cards := avaiableCards.get()
 	var weight int
 	var result [5]Card
 	for i := 0; i < 5; i++ {

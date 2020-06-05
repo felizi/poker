@@ -3,8 +3,8 @@ package main
 type FullHouseChecker struct {
 }
 
-func (o FullHouseChecker) execute(cards [7]Card) (Hand, int, *[5]Card) {
-	m := groupByID(cards)
+func (o FullHouseChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Card) {
+	m := avaiableCards.groupByID()
 
 	var threePair []string
 	var twoPair []string

@@ -58,7 +58,7 @@ func (d Hand) String() string {
 }
 
 type Checker interface {
-	execute(cards [7]Card) (Hand, int, *[5]Card)
+	execute(avaiableCards AvaiableCards) (Hand, int, *[5]Card)
 }
 
 func main() {
@@ -73,23 +73,44 @@ func main() {
 
 	player1 := hand(cards)
 	fmt.Printf("player1: %v\n", player1)
+	cards = remove(cards, player1[:])
 
-	player2 := hand(remove(cards, player1[:]))
+	player2 := hand(cards)
 	fmt.Printf("player2: %v\n", player2)
+	cards = remove(cards, player2[:])
 
-	flop := flop(remove(cards, player2[:]))
-	turn := turn(remove(cards, flop[:]))
+	flop := flop(cards)
+	cards = remove(cards, flop[:])
+
+	turn := turn(cards)
+	cards = remove(cards, turn[:])
+
 	river := river(remove(cards, turn[:]))
+	cards = remove(cards, river[:])
+
 	fmt.Printf("community cards: %v\n", []Card{flop[0], flop[1], flop[2], turn[0], river[0]})
 
-	h, w, c := check(player1, flop, turn, river)
-	fmt.Printf("Player1:\t[%v]\t[%v]\t%v\n", *h, *w, *c)
-	h, w, c = check(player2, flop, turn, river)
-	fmt.Printf("Player2:\t[%v]\t[%v]\t%v\n", *h, *w, *c)
+	ac1 := AvaiableCards{player1, flop, turn, river}
+	h1, w1, c1 := check(ac1)
+	fmt.Printf("Player1:\t[%v]\t[%v]\t%v\n", *h1, *w1, *c1)
+
+	ac2 := AvaiableCards{player2, flop, turn, river}
+	h2, w2, c2 := check(ac2)
+	fmt.Printf("Player2:\t[%v]\t[%v]\t%v\n", *h2, *w2, *c2)
+
+	if *h1 == *h2 && *w1 == *w2 {
+		fmt.Println("split pot!")
+	} else if *h1 > *h2 || (*h1 == *h2 && *w1 > *w2) {
+		fmt.Println("Player 1 winner")
+	} else if *h1 < *h2 || (*h1 == *h2 && *w1 < *w2) {
+		fmt.Println("Player 2 winner")
+	} else {
+		fmt.Println("fodeu")
+	}
+
 }
 
-func check(hand [2]Card, flop [3]Card, turn, river [1]Card) (*Hand, *int, *[5]Card) {
-	cards := concatenate(hand, flop, turn, river)
+func check(avaiableCards AvaiableCards) (*Hand, *int, *[5]Card) {
 	checkers := []Checker{
 		RoyalFlushChecker{},
 		StraightFlushChecker{},
@@ -101,7 +122,7 @@ func check(hand [2]Card, flop [3]Card, turn, river [1]Card) (*Hand, *int, *[5]Ca
 		OnePairChecker{},
 		HighCardChecker{}}
 	for _, c := range checkers {
-		h, w, c := c.execute(cards)
+		h, w, c := c.execute(avaiableCards)
 		if w > 0 {
 			return &h, &w, c
 		}
@@ -126,14 +147,17 @@ func removeIndex(s []Card, index int) []Card {
 
 func hand(cards []Card) [2]Card {
 	x := random(cards)
+	cards = remove(cards, []Card{x})
 	y := random(cards)
 	return [2]Card{x, y}
 }
 
 func flop(cards []Card) [3]Card {
 	x := random(cards)
+	cards = remove(cards, []Card{x})
 	y := random(cards)
-	z := random(cards)
+	cards = remove(cards, []Card{y})
+	z := random(remove(cards, []Card{y}))
 	return [3]Card{x, y, z}
 }
 
@@ -163,19 +187,29 @@ func fill(start []Card, complete []Card) *[5]Card {
 	return &result
 }
 
-func groupByID(cards [7]Card) map[string][]Card {
-	m := make(map[string][]Card)
-	for i := 0; i < len(cards); i++ {
-		if m[cards[i].ID] == nil {
-			m[cards[i].ID] = []Card{cards[i]}
-		} else {
-			m[cards[i].ID] = append(m[cards[i].ID], cards[i])
-		}
-	}
-	return m
+type Card struct {
+	ID     string
+	Suit   string
+	Weight int
 }
 
-func groupBySuit(cards [7]Card) map[string][]Card {
+type AvaiableCards struct {
+	Hand  [2]Card
+	Flop  [3]Card
+	Turn  [1]Card
+	River [1]Card
+}
+
+func (o AvaiableCards) get() [7]Card {
+	cards := [7]Card{o.Hand[0], o.Hand[1], o.Flop[0], o.Flop[1], o.Flop[2], o.Turn[0], o.River[0]}
+	sort.Slice(cards[:], func(i, j int) bool {
+		return cards[i].Weight > cards[j].Weight
+	})
+	return cards
+}
+
+func (o AvaiableCards) groupBySuit() map[string][]Card {
+	cards := o.get()
 	m := make(map[string][]Card)
 	for i := 0; i < len(cards); i++ {
 		if m[cards[i].Suit] == nil {
@@ -187,16 +221,15 @@ func groupBySuit(cards [7]Card) map[string][]Card {
 	return m
 }
 
-func concatenate(hand [2]Card, flop [3]Card, turn, river [1]Card) [7]Card {
-	cards := [7]Card{hand[0], hand[1], flop[0], flop[1], flop[2], turn[0], river[0]}
-	sort.Slice(cards[:], func(i, j int) bool {
-		return cards[i].Weight > cards[j].Weight
-	})
-	return cards
-}
-
-type Card struct {
-	ID     string
-	Suit   string
-	Weight int
+func (o AvaiableCards) groupByID() map[string][]Card {
+	cards := o.get()
+	m := make(map[string][]Card)
+	for i := 0; i < len(cards); i++ {
+		if m[cards[i].ID] == nil {
+			m[cards[i].ID] = []Card{cards[i]}
+		} else {
+			m[cards[i].ID] = append(m[cards[i].ID], cards[i])
+		}
+	}
+	return m
 }
