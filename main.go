@@ -98,16 +98,25 @@ func main() {
 	h2, w2, c2 := check(ac2)
 	fmt.Printf("Player2:\t[%v]\t[%v]\t%v\n", *h2, *w2, *c2)
 
-	if *h1 == *h2 && *w1 == *w2 {
-		fmt.Println("split pot!")
-	} else if *h1 > *h2 || (*h1 == *h2 && *w1 > *w2) {
+	if *h1 == *h2 {
+		if *c1 == *c2 {
+			fmt.Println("Split pot!")
+		} else {
+			for x := 0; x < 5; x++ {
+				if c1[x].Weight > c2[x].Weight {
+					fmt.Println("Player 1 winner (same game)")
+					break
+				} else if c2[x].Weight > c1[x].Weight {
+					fmt.Println("Player 2 winner (same game)")
+					break
+				}
+			}
+		}
+	} else if *h1 > *h2 {
 		fmt.Println("Player 1 winner")
-	} else if *h1 < *h2 || (*h1 == *h2 && *w1 < *w2) {
+	} else if *h1 < *h2 {
 		fmt.Println("Player 2 winner")
-	} else {
-		fmt.Println("fodeu")
 	}
-
 }
 
 func check(avaiableCards AvaiableCards) (*Hand, *int, *[5]Card) {
