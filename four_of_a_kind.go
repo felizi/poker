@@ -1,5 +1,7 @@
 package main
 
+import "sort"
+
 type FourOfAKindChecker struct {
 }
 
@@ -21,13 +23,17 @@ func (o FourOfAKindChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5
 			}
 		}
 
+		sort.Slice(temp[:], func(i, j int) bool {
+			return temp[i].Weight > temp[j].Weight
+		})
+
 		result := fill(temp[:], cards[:])
 		var weight int
 		for i := 0; i < len(result); i++ {
 			weight += result[i].Weight
 		}
 
-		return FourOfAKind, weight, result
+		return FourOfAKind, weight, &result
 	}
 
 	return FourOfAKind, 0, nil

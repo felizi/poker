@@ -174,7 +174,7 @@ func random(x []Card) Card {
 	return x[rand.Intn(len(x))]
 }
 
-func fill(start []Card, complete []Card) *[5]Card {
+func fill(start []Card, complete []Card) [5]Card {
 	var result [5]Card
 	completeWithoutStart := remove(complete, start)
 	for i := 0; i < len(result); i++ {
@@ -184,7 +184,7 @@ func fill(start []Card, complete []Card) *[5]Card {
 			result[i] = completeWithoutStart[i-len(start)]
 		}
 	}
-	return &result
+	return result
 }
 
 type Card struct {

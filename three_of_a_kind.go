@@ -1,5 +1,7 @@
 package main
 
+import "sort"
+
 type ThreeOfAKindChecker struct {
 }
 
@@ -21,13 +23,17 @@ func (o ThreeOfAKindChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[
 			}
 		}
 
+		sort.Slice(temp[:], func(i, j int) bool {
+			return temp[i].Weight > temp[j].Weight
+		})
+
 		result := fill(temp[:], cards[:])
 		var weight int
 		for i := 0; i < len(result); i++ {
 			weight += result[i].Weight
 		}
 
-		return ThreeOfAKind, weight, result
+		return ThreeOfAKind, weight, &result
 	}
 
 	return ThreeOfAKind, 0, nil

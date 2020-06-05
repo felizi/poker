@@ -1,5 +1,7 @@
 package main
 
+import "sort"
+
 type OnePairChecker struct {
 }
 
@@ -22,12 +24,16 @@ func (o OnePairChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Car
 			}
 		}
 
+		sort.Slice(temp[:], func(i, j int) bool {
+			return temp[i].Weight > temp[j].Weight
+		})
+
 		result := fill(temp[:], cards[:])
 		var weight int
 		for i := 0; i < len(result); i++ {
 			weight += result[i].Weight
 		}
-		return OnePair, weight, result
+		return OnePair, weight, &result
 	}
 
 	return OnePair, 0, nil

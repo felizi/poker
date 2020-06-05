@@ -1,5 +1,9 @@
 package main
 
+import (
+	"sort"
+)
+
 type TwoPairChecker struct {
 }
 
@@ -10,6 +14,7 @@ func (o TwoPairChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Car
 	for k, v := range m {
 		if len(v) == 2 {
 			matches = append(matches, k)
+
 		}
 	}
 	if len(matches) == 2 {
@@ -22,12 +27,17 @@ func (o TwoPairChecker) execute(avaiableCards AvaiableCards) (Hand, int, *[5]Car
 				idx++
 			}
 		}
+
+		sort.Slice(temp[:], func(i, j int) bool {
+			return temp[i].Weight > temp[j].Weight
+		})
+
 		result := fill(temp[:], cards[:])
 		var weight int
 		for i := 0; i < len(result); i++ {
 			weight += result[i].Weight
 		}
-		return TwoPair, weight, result
+		return TwoPair, weight, &result
 	}
 
 	return TwoPair, 0, nil
