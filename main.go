@@ -62,60 +62,66 @@ type Checker interface {
 }
 
 func main() {
-	var cards []Card
-	sequence := []string{two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, aces}
-	suits := []string{spade, heart, diamond, club}
-	for x := 0; x < len(sequence); x++ {
-		for z := 0; z < len(suits); z++ {
-			cards = append(cards, Card{ID: sequence[x], Suit: suits[z], Weight: x})
-		}
-	}
-
-	player1 := hand(cards)
-	fmt.Printf("player1: %v\n", player1)
-	cards = remove(cards, player1[:])
-
-	player2 := hand(cards)
-	fmt.Printf("player2: %v\n", player2)
-	cards = remove(cards, player2[:])
-
-	flop := flop(cards)
-	cards = remove(cards, flop[:])
-
-	turn := turn(cards)
-	cards = remove(cards, turn[:])
-
-	river := river(remove(cards, turn[:]))
-	cards = remove(cards, river[:])
-
-	fmt.Printf("community cards: %v\n", []Card{flop[0], flop[1], flop[2], turn[0], river[0]})
-
-	ac1 := AvaiableCards{player1, flop, turn, river}
-	h1, w1, c1 := check(ac1)
-	fmt.Printf("Player1:\t[%v]\t[%v]\t%v\n", *h1, *w1, *c1)
-
-	ac2 := AvaiableCards{player2, flop, turn, river}
-	h2, w2, c2 := check(ac2)
-	fmt.Printf("Player2:\t[%v]\t[%v]\t%v\n", *h2, *w2, *c2)
-
-	if *h1 == *h2 {
-		if *c1 == *c2 {
-			fmt.Println("Split pot!")
-		} else {
-			for x := 0; x < 5; x++ {
-				if c1[x].Weight > c2[x].Weight {
-					fmt.Println("Player 1 winner (same game)")
-					break
-				} else if c2[x].Weight > c1[x].Weight {
-					fmt.Println("Player 2 winner (same game)")
-					break
-				}
+	for {
+		var cards []Card
+		sequence := []string{two, three, four, five, six, seven, eight, nine, ten, jack, queen, king, aces}
+		suits := []string{spade, heart, diamond, club}
+		for x := 0; x < len(sequence); x++ {
+			for z := 0; z < len(suits); z++ {
+				cards = append(cards, Card{ID: sequence[x], Suit: suits[z], Weight: x + 1})
 			}
 		}
-	} else if *h1 > *h2 {
-		fmt.Println("Player 1 winner")
-	} else if *h1 < *h2 {
-		fmt.Println("Player 2 winner")
+
+		player1 := hand(cards)
+		fmt.Printf("player1: %v\n", player1)
+		cards = remove(cards, player1[:])
+
+		player2 := hand(cards)
+		fmt.Printf("player2: %v\n", player2)
+		cards = remove(cards, player2[:])
+
+		flop := flop(cards)
+		cards = remove(cards, flop[:])
+
+		turn := turn(cards)
+		cards = remove(cards, turn[:])
+
+		river := river(remove(cards, turn[:]))
+		cards = remove(cards, river[:])
+
+		fmt.Printf("community cards: %v\n", []Card{flop[0], flop[1], flop[2], turn[0], river[0]})
+
+		ac1 := AvaiableCards{player1, flop, turn, river}
+		h1, w1, c1 := check(ac1)
+		fmt.Printf("Player1:\t[%v]\t[%v]\t%v\n", *h1, *w1, *c1)
+
+		ac2 := AvaiableCards{player2, flop, turn, river}
+		h2, w2, c2 := check(ac2)
+		fmt.Printf("Player2:\t[%v]\t[%v]\t%v\n", *h2, *w2, *c2)
+
+		if *h1 == Straight || *h2 == Straight {
+			panic("")
+		}
+
+		if *h1 == *h2 {
+			if *c1 == *c2 {
+				fmt.Println("Split pot!")
+			} else {
+				for x := 0; x < 5; x++ {
+					if c1[x].Weight > c2[x].Weight {
+						fmt.Println("Player 1 winner (same game)")
+						break
+					} else if c2[x].Weight > c1[x].Weight {
+						fmt.Println("Player 2 winner (same game)")
+						break
+					}
+				}
+			}
+		} else if *h1 > *h2 {
+			fmt.Println("Player 1 winner")
+		} else if *h1 < *h2 {
+			fmt.Println("Player 2 winner")
+		}
 	}
 }
 
@@ -211,6 +217,13 @@ type AvaiableCards struct {
 
 func (o AvaiableCards) get() [7]Card {
 	cards := [7]Card{o.Hand[0], o.Hand[1], o.Flop[0], o.Flop[1], o.Flop[2], o.Turn[0], o.River[0]}
+	sort.Slice(cards[:], func(i, j int) bool {
+		return cards[i].Weight > cards[j].Weight
+	})
+	return cards
+}
+
+func (o AvaiableCards) order(cards [7]Card) [7]Card {
 	sort.Slice(cards[:], func(i, j int) bool {
 		return cards[i].Weight > cards[j].Weight
 	})
